@@ -8,7 +8,7 @@ package main
 
 import (
 	"fmt"
-        "WardrobeManagementMS/pkg/api"
+        "WardrobeManagerMS/pkg/api"
 )
 
 func main() {
