@@ -7,11 +7,11 @@
 package main
 
 import (
+	"WardrobeManagerMS/pkg/api"
 	"fmt"
-        "WardrobeManagerMS/pkg/api"
 )
 
 func main() {
 
-	fmt.Printf("Version for definitions : %s\n", definitions.Version)
+	fmt.Printf("Version for definitions : %s\n", api.Version)
 }
