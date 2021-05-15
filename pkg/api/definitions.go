@@ -26,3 +26,12 @@ type WardrobeCloset struct {
 	User      string `bson:"user"`
 	Wardrobes []Wardrobe
 }
+
+// Error
+type UserNotFound struct {
+	User string
+}
+
+type NoSuchFileOrDirectory struct {
+	File string
+}
