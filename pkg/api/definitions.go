@@ -35,3 +35,11 @@ type UserNotFound struct {
 type NoSuchFileOrDirectory struct {
 	File string
 }
+
+type ResourceUnavailable struct {
+	Server string
+}
+
+type DuplicateFile struct {
+	File string
+}

@@ -57,8 +57,10 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 			User:      newWd.User,
 			Wardrobes: make([]Wardrobe, 1),
 		}
+	case *ResourceUnavailable:
+		return fmt.Errorf("Wardrobe db is unavailable : %w", err)
 	default:
-		return fmt.Errorf("Database access failure : %w", err)
+		return fmt.Errorf("Unknown error : %w", err)
 	}
 
 	//Store image to file
@@ -68,11 +70,13 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 	for _, file := range []string{imageFile, labelFile} {
 		_, err := w.imageDb.GetFile(file)
 		switch err := err.(type) {
-		case nil:
-			// file with same name found
-			return fmt.Errorf("Duplicate file name : %w", err)
 		case *NoSuchFileOrDirectory:
 			// this is good
+		case nil:
+			// file with same name found
+			return &DuplicateFile{
+				File: file,
+			}
 		default:
 			return fmt.Errorf("File system access error : %w", err)
 		}
@@ -118,13 +122,34 @@ func (w *wardrobeService) GetAllWardrobe(user string) ([]NewWardrobeRequest, err
 	return []NewWardrobeRequest{NewWardrobeRequest{}}, nil
 }
 
-func (e *UserNotFound) Error() string {
+// Error codes
+func (e UserNotFound) Error() string {
 	return fmt.Sprintf("User %s not found", e.User)
 }
 
-func (e *NoSuchFileOrDirectory) Error() string {
+func (e NoSuchFileOrDirectory) Error() string {
 	return fmt.Sprintf("File %s not found", e.File)
 }
+
+func (e ResourceUnavailable) Error() string {
+	return fmt.Sprintf("Service %s is down", e.Server)
+}
+
+func (e DuplicateFile) Error() string {
+	return fmt.Sprintf("Duplicate file name %s", e.File)
+}
+
+/*
+func (e DuplicateFile) Is(target error) bool {
+	switch target.(type) {
+	default:
+		return false
+	case *DuplicateFile:
+		return true
+	}
+
+}
+*/
 
 func genUniqImageFileName(user string, filename string) string {
 	stringToHash := []byte(user + "_image_" + filename)
