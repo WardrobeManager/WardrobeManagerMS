@@ -57,7 +57,6 @@ func NewWardrobeRepository() (api.WardrobeRepository, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	wardRepo := &mongoWardRepo{
 		collection: newCollection,
 	}
@@ -66,10 +65,27 @@ func NewWardrobeRepository() (api.WardrobeRepository, error) {
 }
 
 func (m *mongoWardRepo) Add(user string, wards *api.WardrobeCloset) error {
+
+	_, err := m.collection.InsertOne(context.TODO(), wards)
+	if err != nil {
+		return fmt.Errorf("Error adding user %s : %w", user, err)
+	}
+
 	return nil
 }
 
 func (m *mongoWardRepo) Get(user string) (*api.WardrobeCloset, error) {
+	filter := bson.M{"username": user}
+
+	var wardCloset api.WardrobeCloset
+
+	err := m.collection.FindOne(context.TODO(), filter).Decode(&wardCloset)
+	if err != nil {
+		return nil, fmt.Errorf("User %s not present", user)
+	}
+
+	return &wardCloset, nil
+
 	return &api.WardrobeCloset{}, nil
 }
 
