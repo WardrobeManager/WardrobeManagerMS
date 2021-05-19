@@ -8,6 +8,7 @@ package api_test
 
 import (
 	"WardrobeManagerMS/pkg/api"
+	repo "WardrobeManagerMS/pkg/repository"
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
@@ -40,7 +41,7 @@ func (m *mockWardRepo) Update(user string, wards *api.WardrobeCloset) error {
 	return nil
 }
 
-func (m *mockWardRepo) Delete(user string) error {
+func (m *mockWardRepo) DeleteAll(user string) error {
 	return nil
 }
 
@@ -122,21 +123,81 @@ func TestAddWardrobeService(t *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			err := ws.AddWardrobe(c.newWd)
+	testCases := func() {
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				err := ws.AddWardrobe(c.newWd)
 
-			if c.expected == nil {
-				if err != nil {
-					t.Errorf("Expected nil, got %v", err)
+				if c.expected == nil {
+					if err != nil {
+						t.Errorf("Expected nil, got %v", err)
+					}
+				} else {
+					if errors.As(err, &c.expected) == false {
+						t.Errorf("Expected %v, got %v", c.expected, err)
+					}
 				}
-			} else {
-				if errors.As(err, &c.expected) == false {
-					t.Errorf("Expected %v, got %v", c.expected, err)
-				}
-			}
-		})
+			})
+		}
 	}
+
+	fmt.Println("Run with MOCKdb")
+	testCases()
+
+}
+
+func TestAddWardrobeServiceWithMongoDB(t *testing.T) {
+
+	mongoWardrobe, err1 := repo.NewWardrobeRepository()
+	if err1 != nil {
+		t.Errorf(" Initializing Mongo repository failed  : %v", err1)
+	}
+
+	mockImage := &mockImageRepo{}
+
+	ws, err := api.NewWardrobeService(mongoWardrobe, mockImage)
+	if err != nil {
+		t.Errorf(" NewWardrobService failed : %v", err)
+	}
+
+	cases := []struct {
+		name     string
+		newWd    api.NewWardrobeRequest
+		expected error
+	}{
+		{
+			name: "BasicAddNewWardrobeRequest",
+			newWd: api.NewWardrobeRequest{
+				User:        "foobar",
+				Id:          "",
+				Description: "Leggings",
+				MainImage:   []byte{0xAA, 0xBB, 0xCC},
+				LabelImage:  []byte{0xAA, 0xBB, 0xCC},
+			},
+			expected: nil,
+		},
+	}
+
+	testCases := func() {
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				err := ws.AddWardrobe(c.newWd)
+
+				if c.expected == nil {
+					if err != nil {
+						t.Errorf("Expected nil, got %v", err)
+					}
+				} else {
+					if errors.As(err, &c.expected) == false {
+						t.Errorf("Expected %v, got %v", c.expected, err)
+					}
+				}
+			})
+		}
+	}
+
+	testCases()
+
 }
 
 func tsGenUniqImageFileName(user string, filename string) string {

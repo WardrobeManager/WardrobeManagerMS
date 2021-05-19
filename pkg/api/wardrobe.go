@@ -23,7 +23,7 @@ type WardrobeRepository interface {
 	Add(user string, wardrobes *WardrobeCloset) error
 	Get(user string) (*WardrobeCloset, error)
 	Update(user string, wardrobes *WardrobeCloset) error
-	Delete(user string) error
+	DeleteAll(user string) error
 }
 
 type ImageRepository interface {
@@ -49,13 +49,16 @@ func NewWardrobeService(dbIn WardrobeRepository, imageDbIn ImageRepository) (War
 
 func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 
+	var addUser bool = false
+
 	wc, err := w.db.Get(newWd.User)
 	switch err := err.(type) {
 	case nil:
 	case *UserNotFound:
+		addUser = true
 		wc = &WardrobeCloset{
 			User:      newWd.User,
-			Wardrobes: make([]Wardrobe, 1),
+			Wardrobes: make([]Wardrobe, 0),
 		}
 	case *ResourceUnavailable:
 		return fmt.Errorf("Wardrobe db is unavailable : %w", err)
@@ -100,7 +103,11 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 		Description: newWd.Description,
 	})
 
-	err = w.db.Update(newWd.User, wc)
+	if addUser == true {
+		err = w.db.Add(newWd.User, wc)
+	} else {
+		err = w.db.Update(newWd.User, wc)
+	}
 	switch err := err.(type) {
 	case nil:
 	default:
