@@ -73,8 +73,9 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 	for _, file := range []string{imageFile, labelFile} {
 		_, err := w.imageDb.GetFile(file)
 		switch err := err.(type) {
-		case *NoSuchFileOrDirectory:
+		case NoSuchFileOrDirectory:
 			// this is good
+			break
 		case nil:
 			// file with same name found
 			return &DuplicateFile{
@@ -98,6 +99,7 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 
 	//Update user
 	wc.Wardrobes = append(wc.Wardrobes, Wardrobe{
+		Identifier:  newWd.Id,
 		MainFile:    imageFile,
 		LabelFile:   labelFile,
 		Description: newWd.Description,

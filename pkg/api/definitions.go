@@ -9,11 +9,11 @@ package api
 const Version = "1.0"
 
 type NewWardrobeRequest struct {
-	User        string `json:"user"`
-	Id          string `json:"id"`
-	Description string `json:"description"`
-	MainImage   []byte `json:"main-image"`
-	LabelImage  []byte `json:"label-image"`
+	User        string `json:"user" binding:"required"`
+	Id          string `json:"id" binding:"required"`
+	Description string `json:"description" binding:"required"`
+	MainImage   []byte `json:"main-image" binding:"required"`
+	LabelImage  []byte `json:"label-image" binding:"required"`
 }
 
 type Wardrobe struct {
