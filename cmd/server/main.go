@@ -61,7 +61,7 @@ func addWardrobe(c *gin.Context) {
 	var newWd api.NewWardrobeRequest
 	err := c.BindJSON(&newWd)
 	if err != nil {
-		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error: %s", err))
+		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error decoding JSON : %s", err))
 		return
 	}
 
@@ -69,7 +69,7 @@ func addWardrobe(c *gin.Context) {
 	newWd.Id = wardId
 	err = ws.AddWardrobe(newWd)
 	if err != nil {
-		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error: %s", err))
+		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error adding wardrobe: %s", err))
 		return
 	}
 
@@ -78,10 +78,16 @@ func addWardrobe(c *gin.Context) {
 
 func getAllWardrobe(c *gin.Context) {
 	username := c.Params.ByName("username")
-	wardId := c.Params.ByName("id")
 
-	fmt.Printf("getAllWardrobe:%s:%s", username, wardId)
-	c.JSON(http.StatusOK, "getWardrobe")
+	fmt.Printf("getAllWardrobe:%s", username)
+
+	wards, err := ws.GetAllWardrobe(username)
+	if err != nil {
+		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error: %s", err))
+		return
+	}
+
+	c.JSON(http.StatusOK, &wards)
 }
 
 func getWardrobe(c *gin.Context) {
@@ -95,6 +101,12 @@ func getWardrobe(c *gin.Context) {
 func deleteWardrobe(c *gin.Context) {
 	username := c.Params.ByName("username")
 	wardId := c.Params.ByName("id")
+
+	err := ws.DeleteWardrobe(username, wardId)
+	if err != nil {
+		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error: %s", err))
+		return
+	}
 
 	fmt.Printf("deleteWardrobe:%s:%s", username, wardId)
 	c.String(http.StatusOK, "deleteWardrobe")

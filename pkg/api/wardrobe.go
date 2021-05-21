@@ -104,7 +104,6 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 		LabelFile:   labelFile,
 		Description: newWd.Description,
 	})
-
 	if addUser == true {
 		err = w.db.Add(newWd.User, wc)
 	} else {
@@ -120,6 +119,48 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 }
 
 func (w *wardrobeService) DeleteWardrobe(user string, id string) error {
+
+	wc, err := w.db.Get(user)
+	switch err := err.(type) {
+	case nil:
+		break
+	case *UserNotFound:
+		return fmt.Errorf("User not found %s : %w", user, err)
+	case *ResourceUnavailable:
+		return fmt.Errorf("Wardrobe db is unavailable : %w", err)
+	default:
+		return fmt.Errorf("Unknown error : %w", err)
+	}
+
+	if len(wc.Wardrobes) == 0 {
+		return fmt.Errorf("Empty closet")
+	}
+
+	tmp := wc.Wardrobes[:0]
+	for _, ward := range wc.Wardrobes {
+		if ward.Identifier == id {
+			err = w.imageDb.DeleteFile(ward.MainFile)
+			if err != nil {
+				fmt.Printf("Error deleting image file : %w", err)
+			}
+
+			err = w.imageDb.DeleteFile(ward.LabelFile)
+			if err != nil {
+				fmt.Printf("Error deleting label file : %w", err)
+			}
+		} else {
+			tmp = append(tmp, ward)
+		}
+	}
+	wc.Wardrobes = tmp
+
+	err = w.db.Update(user, wc)
+	switch err := err.(type) {
+	case nil:
+	default:
+		return fmt.Errorf("Database access failure : %w", err)
+	}
+
 	return nil
 }
 
@@ -128,7 +169,45 @@ func (w *wardrobeService) GetWardrobe(user string, id string) (*NewWardrobeReque
 }
 
 func (w *wardrobeService) GetAllWardrobe(user string) ([]NewWardrobeRequest, error) {
-	return []NewWardrobeRequest{NewWardrobeRequest{}}, nil
+
+	wc, err := w.db.Get(user)
+	switch err := err.(type) {
+	case nil:
+		break
+	case *UserNotFound:
+		return nil, fmt.Errorf("User not found %s : %w", user, err)
+	case *ResourceUnavailable:
+		return nil, fmt.Errorf("Wardrobe db is unavailable : %w", err)
+	default:
+		return nil, fmt.Errorf("Unknown error : %w", err)
+	}
+
+	if len(wc.Wardrobes) == 0 {
+		return nil, fmt.Errorf("Empty closet")
+	}
+
+	wardReqs := make([]NewWardrobeRequest, 0)
+	for _, ward := range wc.Wardrobes {
+		wardReq := NewWardrobeRequest{
+			User:        user,
+			Id:          ward.Identifier,
+			Description: ward.Description,
+		}
+
+		wardReq.MainImage, err = w.imageDb.GetFile(ward.MainFile)
+		if err != nil {
+			return nil, fmt.Errorf("Error accessing image : %w", err)
+		}
+
+		wardReq.LabelImage, err = w.imageDb.GetFile(ward.LabelFile)
+		if err != nil {
+			return nil, fmt.Errorf("Error accessing image : %w", err)
+		}
+
+		wardReqs = append(wardReqs, wardReq)
+	}
+
+	return wardReqs, nil
 }
 
 // Error codes

@@ -91,6 +91,18 @@ func (m *fileImageRepo) UpdateFile(name string, file []byte) error {
 }
 
 func (m *fileImageRepo) DeleteFile(name string) error {
+	filename := filepath.Join(m.Dir, name)
+
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		return api.NoSuchFileOrDirectory{
+			File: filename,
+		}
+	}
+
+	err := os.Remove(filename)
+	if err != nil {
+		return fmt.Errorf("Error removing file %s : %w", filename, err)
+	}
 
 	return nil
 }
