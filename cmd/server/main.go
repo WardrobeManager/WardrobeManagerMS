@@ -27,7 +27,7 @@ func main() {
 		fmt.Printf(" Initializing Mongo repository failed  : %v", err)
 	}
 
-	imageRepo, err1 := repo.NewFileImageRepository("/tmp")
+	imageRepo, err1 := repo.NewFileImageRepository("/tmp/ImageDb")
 	if err != nil {
 		fmt.Printf(" Initializing file repository failed  : %v", err1)
 	}
@@ -94,8 +94,14 @@ func getWardrobe(c *gin.Context) {
 	username := c.Params.ByName("username")
 	wardId := c.Params.ByName("id")
 
+	wards, err := ws.GetWardrobe(username, wardId)
+	if err != nil {
+		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error: %s", err))
+		return
+	}
+
 	fmt.Printf("getWardrobe:%s:%s", username, wardId)
-	c.JSON(http.StatusOK, "getWardrobe")
+	c.JSON(http.StatusOK, &wards)
 }
 
 func deleteWardrobe(c *gin.Context) {

@@ -165,7 +165,46 @@ func (w *wardrobeService) DeleteWardrobe(user string, id string) error {
 }
 
 func (w *wardrobeService) GetWardrobe(user string, id string) (*NewWardrobeRequest, error) {
-	return &NewWardrobeRequest{}, nil
+
+	wc, err := w.db.Get(user)
+	switch err := err.(type) {
+	case nil:
+		break
+	case *UserNotFound:
+		return nil, fmt.Errorf("User not found %s : %w", user, err)
+	case *ResourceUnavailable:
+		return nil, fmt.Errorf("Wardrobe db is unavailable : %w", err)
+	default:
+		return nil, fmt.Errorf("Unknown error : %w", err)
+	}
+
+	if len(wc.Wardrobes) == 0 {
+		return nil, fmt.Errorf("Empty closet")
+	}
+
+	for _, ward := range wc.Wardrobes {
+		if ward.Identifier == id {
+			wardReq := &NewWardrobeRequest{
+				User:        user,
+				Id:          ward.Identifier,
+				Description: ward.Description,
+			}
+
+			wardReq.MainImage, err = w.imageDb.GetFile(ward.MainFile)
+			if err != nil {
+				return nil, fmt.Errorf("Error accessing image : %w", err)
+			}
+
+			wardReq.LabelImage, err = w.imageDb.GetFile(ward.LabelFile)
+			if err != nil {
+				return nil, fmt.Errorf("Error accessing image : %w", err)
+			}
+
+			return wardReq, nil
+		}
+	}
+
+	return nil, UserNotFound{User: user}
 }
 
 func (w *wardrobeService) GetAllWardrobe(user string) ([]NewWardrobeRequest, error) {
