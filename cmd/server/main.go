@@ -49,7 +49,7 @@ func main() {
 	// delete a wardrobe for a user
 	r.DELETE("/wardrobe/:username/:id", deleteWardrobe)
 
-	r.Run(":57400")
+	r.Run(":57401")
 	fmt.Println("hello, welcome to user management MS")
 }
 
