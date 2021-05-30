@@ -8,7 +8,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 
@@ -16,11 +18,20 @@ import (
 	repo "WardrobeManagerMS/pkg/repository"
 )
 
+const logFile = "/tmp/WM/gin.log"
+
 var ws api.WardrobeService
 
 func main() {
 
 	r := gin.Default()
+
+	f, err2 := os.OpenFile(logFile, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
+	if err2 != nil {
+		fmt.Printf("Failing to create log file : %v", err2)
+	} else {
+		gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
+	}
 
 	mongoWardrobeRepo, err := repo.NewWardrobeRepository()
 	if err != nil {
