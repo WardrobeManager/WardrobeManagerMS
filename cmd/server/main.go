@@ -7,23 +7,29 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang/glog"
 
 	"WardrobeManagerMS/pkg/api"
+	"WardrobeManagerMS/pkg/app"
 	repo "WardrobeManagerMS/pkg/repository"
 )
 
 const logFile = "/tmp/WM/gin.log"
+const imageRepo = "/tmp/ImageDb"
 
-var ws api.WardrobeService
+func init() {
+	flag.Parse()
+}
 
 func main() {
 
+	glog.Infof("Starting WM with {GIN-debug=%s}, {Image=%s}", logFile, imageRepo)
 	r := gin.Default()
 
 	f, err2 := os.OpenFile(logFile, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
@@ -35,96 +41,29 @@ func main() {
 
 	mongoWardrobeRepo, err := repo.NewWardrobeRepository()
 	if err != nil {
-		fmt.Printf(" Initializing Mongo repository failed  : %v", err)
+		glog.Errorf(" Initializing Mongo repository failed  : %v", err)
+		return
 	}
 
 	imageRepo, err1 := repo.NewFileImageRepository("/tmp/ImageDb")
-	if err != nil {
-		fmt.Printf(" Initializing file repository failed  : %v", err1)
-	}
-
-	ws, err = api.NewWardrobeService(mongoWardrobeRepo, imageRepo)
-	if err != nil {
-		fmt.Printf(" NewWardrobService failed : %v", err)
-	}
-
-	// add a wardrobe for a user
-	r.POST("/wardrobe/:username/:id", addWardrobe)
-
-	// get all wardrobe for a user
-	r.GET("/wardrobe/:username", getAllWardrobe)
-
-	// get a wardrobe for a user
-	r.GET("/wardrobe/:username/:id", getWardrobe)
-
-	// delete a wardrobe for a user
-	r.DELETE("/wardrobe/:username/:id", deleteWardrobe)
-
-	r.Run(":57401")
-	fmt.Println("hello, welcome to user management MS")
-}
-
-func addWardrobe(c *gin.Context) {
-
-	username := c.Params.ByName("username")
-	wardId := c.Params.ByName("id")
-
-	var newWd api.NewWardrobeRequest
-	err := c.BindJSON(&newWd)
-	if err != nil {
-		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error decoding JSON : %s", err))
+	if err1 != nil {
+		glog.Errorf(" Initializing file repository failed  : %v", err1)
 		return
 	}
 
-	newWd.User = username
-	newWd.Id = wardId
-	err = ws.AddWardrobe(newWd)
-	if err != nil {
-		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error adding wardrobe: %s", err))
+	ws, err2 := api.NewWardrobeService(mongoWardrobeRepo, imageRepo)
+	if err2 != nil {
+		glog.Errorf(" NewWardrobService failed : %v", err2)
 		return
 	}
 
-	c.String(http.StatusOK, "addUser")
-}
+	server := app.NewWardrobeServer(r, ws)
 
-func getAllWardrobe(c *gin.Context) {
-	username := c.Params.ByName("username")
-
-	fmt.Printf("getAllWardrobe:%s", username)
-
-	wards, err := ws.GetAllWardrobe(username)
+	// start the server
+	err = server.Run()
 	if err != nil {
-		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error: %s", err))
+		glog.Errorf(" Server run failed : %v", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, &wards)
-}
-
-func getWardrobe(c *gin.Context) {
-	username := c.Params.ByName("username")
-	wardId := c.Params.ByName("id")
-
-	wards, err := ws.GetWardrobe(username, wardId)
-	if err != nil {
-		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error: %s", err))
-		return
-	}
-
-	fmt.Printf("getWardrobe:%s:%s", username, wardId)
-	c.JSON(http.StatusOK, &wards)
-}
-
-func deleteWardrobe(c *gin.Context) {
-	username := c.Params.ByName("username")
-	wardId := c.Params.ByName("id")
-
-	err := ws.DeleteWardrobe(username, wardId)
-	if err != nil {
-		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error: %s", err))
-		return
-	}
-
-	fmt.Printf("deleteWardrobe:%s:%s", username, wardId)
-	c.String(http.StatusOK, "deleteWardrobe")
 }
