@@ -23,6 +23,10 @@ import (
 const logFile = "/tmp/WM/gin.log"
 const imageRepo = "/tmp/ImageDb"
 
+const redisServer = "172.16.42.18:6379"
+const txChannel = "Label"
+const rxChannel = "Text"
+
 func init() {
 	flag.Parse()
 }
@@ -51,7 +55,7 @@ func main() {
 		return
 	}
 
-	ws, err2 := api.NewWardrobeService(mongoWardrobeRepo, imageRepo)
+	ws, err2 := api.NewWardrobeService(mongoWardrobeRepo, imageRepo, redisServer, rxChannel, txChannel)
 	if err2 != nil {
 		glog.Errorf(" NewWardrobService failed : %v", err2)
 		return

@@ -27,6 +27,18 @@ type WardrobeCloset struct {
 	Wardrobes []Wardrobe
 }
 
+type LabelToTextRequest struct {
+	User     string `json:"user" binding="required"`
+	Id       string `json:"id" binding="required"`
+	RawImage string `json:"raw-image" binding="required"`
+}
+
+type LabelToTextResponse struct {
+	User string `json:"user" binding="required"`
+	Id   string `json:"id" binding="required"`
+	Text string `json:"text" binding="required"`
+}
+
 // Error
 type UserNotFound struct {
 	User string

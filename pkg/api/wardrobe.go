@@ -9,7 +9,11 @@ package api
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+
+	"github.com/golang/glog"
+	"github.com/gomodule/redigo/redis"
 )
 
 type WardrobeService interface {
@@ -36,13 +40,26 @@ type ImageRepository interface {
 type wardrobeService struct {
 	db      WardrobeRepository
 	imageDb ImageRepository
+	l       *wardrobeLabelToText
 }
 
-func NewWardrobeService(dbIn WardrobeRepository, imageDbIn ImageRepository) (WardrobeService, error) {
+func NewWardrobeService(dbIn WardrobeRepository, imageDbIn ImageRepository, rds, rx, tx string) (WardrobeService, error) {
+
+	glog.Infof("Creating Wardrobe Service")
+
 	service := &wardrobeService{
 		db:      dbIn,
 		imageDb: imageDbIn,
 	}
+
+	var err error
+	service.l, err = newWardrobeLabelToText(rds, rx, tx, service)
+	if err != nil {
+		glog.Errorf("error initializing label to text service endpoint : {err=%v}", err)
+		return nil, err
+	}
+
+	go service.l.receiveLoop()
 
 	return service, nil
 }
@@ -113,6 +130,12 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 	case nil:
 	default:
 		return fmt.Errorf("Database access failure : %w", err)
+	}
+
+	//label to text
+	err = w.l.sendLabel(newWd.User, newWd.Id, labelFile)
+	if err != nil {
+		glog.Warningf("failure while trying to send lable from label to text {err=%v}", err)
 	}
 
 	return nil
@@ -247,6 +270,122 @@ func (w *wardrobeService) GetAllWardrobe(user string) ([]NewWardrobeRequest, err
 	}
 
 	return wardReqs, nil
+}
+
+//private functions
+func (w *wardrobeService) updateWardrobeLabelText(user, id, text string) error {
+
+	return nil
+}
+
+//label to text service
+type wardrobeLabelToText struct {
+	conn      redis.Conn
+	psc       redis.PubSubConn
+	txconn    redis.Conn
+	rxChannel string
+	txChannel string
+	s         *wardrobeService
+}
+
+func newWardrobeLabelToText(redisServerAddr, rxChannel, txChannel string, s *wardrobeService) (*wardrobeLabelToText, error) {
+
+	glog.Infof("Dialing redis server : {address=%s}", redisServerAddr)
+
+	c, err := redis.Dial("tcp", redisServerAddr)
+	if err != nil {
+		glog.Errorf("error dialing redis server to establish RX conn: {err=%v}", err)
+		return nil, err
+	}
+
+	txc, err := redis.Dial("tcp", redisServerAddr)
+	if err != nil {
+		glog.Errorf("error dialing redis server to establish TX conn: {err=%v}", err)
+		return nil, err
+	}
+
+	l := &wardrobeLabelToText{
+		conn: c,
+		psc: redis.PubSubConn{
+			Conn: c,
+		},
+		txconn:    txc,
+		rxChannel: rxChannel,
+		txChannel: txChannel,
+		s:         s,
+	}
+
+	return l, nil
+
+}
+
+func (s *wardrobeLabelToText) receiveLoop() {
+	glog.Infof("Running label to text receive loop")
+
+	if err := s.psc.Subscribe(redis.Args{}.AddFlat(s.rxChannel)...); err != nil {
+		glog.Errorf("Error subscribing to receive {channel=%s} : {err=%v}", s.rxChannel, err)
+		return
+	}
+
+	for {
+		switch n := s.psc.Receive().(type) {
+		case error:
+			glog.Errorf("Received error from redis server {err=%v}", n)
+			return
+		case redis.Message:
+			if err := s.onMessageReceive(n.Channel, n.Data); err != nil {
+				glog.Errorf("Error processing message received on {channel=%s}", n.Channel)
+			}
+		case redis.Subscription:
+			switch n.Count {
+			case 1:
+				glog.Infof("Subscribe to {channel=%s}", n.Channel)
+			case 0:
+				glog.Errorf("Unexpected unsubscribe to {channel=%s}", n.Channel)
+				return
+			}
+		}
+	}
+}
+
+func (s *wardrobeLabelToText) onMessageReceive(channel string, data []byte) error {
+	glog.Infof("Received message on {channel=%s}, {size=%d}", channel, len(data))
+
+	var resp LabelToTextResponse
+	err1 := json.Unmarshal(data, &resp)
+	if err1 != nil {
+		glog.Error("error unmarshaling received label to text json response {err=%v}", err1)
+		return err1
+	}
+
+	err2 := s.s.updateWardrobeLabelText(resp.User, resp.Id, resp.Id)
+	if err2 != nil {
+		glog.Error("error updating wardrobe label text  {err=%v}", err2)
+		return err2
+	}
+
+	return nil
+}
+
+func (s *wardrobeLabelToText) sendLabel(user, id, image string) error {
+
+	req := &LabelToTextRequest{
+		User:     user,
+		Id:       id,
+		RawImage: image,
+	}
+
+	jsonReq, err3 := json.Marshal(req)
+	if err3 != nil {
+		glog.Error("error marshaling text json output {err=%v}", err3)
+		return err3
+	}
+
+	if _, err := s.txconn.Do("PUBLISH", s.txChannel, jsonReq); err != nil {
+		glog.Errorf("error publishing label to text request to tx channel, {txChannel=%s}, {err=%v}", s.txChannel, err)
+		return err
+	}
+	return nil
 }
 
 // Error codes
