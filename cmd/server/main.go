@@ -23,7 +23,7 @@ import (
 const logFile = "/tmp/WM/gin.log"
 const imageRepo = "/tmp/ImageDb"
 
-const redisServer = "172.16.42.18:6379"
+const redisServer = "127.0.0.1:6379"
 const txChannel = "Label"
 const rxChannel = "Text"
 

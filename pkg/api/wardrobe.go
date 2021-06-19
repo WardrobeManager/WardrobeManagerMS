@@ -8,6 +8,7 @@ package api
 
 import (
 	"crypto/md5"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -133,7 +134,8 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 	}
 
 	//label to text
-	err = w.l.sendLabel(newWd.User, newWd.Id, labelFile)
+	sEnc := base64.StdEncoding.EncodeToString(newWd.LabelImage)
+	err = w.l.sendLabel(newWd.User, newWd.Id, sEnc)
 	if err != nil {
 		glog.Warningf("failure while trying to send lable from label to text {err=%v}", err)
 	}
@@ -274,7 +276,7 @@ func (w *wardrobeService) GetAllWardrobe(user string) ([]NewWardrobeRequest, err
 
 //private functions
 func (w *wardrobeService) updateWardrobeLabelText(user, id, text string) error {
-
+	glog.Infof("Received text {user=%s}, {id=%s}, {text=%s}", user, id, text)
 	return nil
 }
 
@@ -358,7 +360,7 @@ func (s *wardrobeLabelToText) onMessageReceive(channel string, data []byte) erro
 		return err1
 	}
 
-	err2 := s.s.updateWardrobeLabelText(resp.User, resp.Id, resp.Id)
+	err2 := s.s.updateWardrobeLabelText(resp.User, resp.Id, resp.Text)
 	if err2 != nil {
 		glog.Error("error updating wardrobe label text  {err=%v}", err2)
 		return err2
