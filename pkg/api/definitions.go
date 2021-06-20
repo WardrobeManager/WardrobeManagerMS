@@ -21,7 +21,9 @@ type Wardrobe struct {
 	MainFile    string `bson:"main-file"`
 	LabelFile   string `bson:"label-file"`
 	Description string `bson:"description"`
+	LabelText   string `bson:"label-text"`
 }
+
 type WardrobeCloset struct {
 	User      string `bson:"user"`
 	Wardrobes []Wardrobe

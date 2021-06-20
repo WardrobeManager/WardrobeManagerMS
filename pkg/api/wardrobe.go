@@ -276,7 +276,47 @@ func (w *wardrobeService) GetAllWardrobe(user string) ([]NewWardrobeRequest, err
 
 //private functions
 func (w *wardrobeService) updateWardrobeLabelText(user, id, text string) error {
+
 	glog.Infof("Received text {user=%s}, {id=%s}, {text=%s}", user, id, text)
+
+	wc, err := w.db.Get(user)
+	switch err := err.(type) {
+	case nil:
+		break
+	case *UserNotFound:
+		glog.Errorf("User not found {user=%s}, {err=%v}", user, err)
+		return fmt.Errorf("User not found %s : %w", user, err)
+	case *ResourceUnavailable:
+		glog.Errorf("Wardrobe db is unavailable : %w", err)
+		return fmt.Errorf("Wardrobe db is unavailable : %w", err)
+	default:
+		glog.Errorf("Unknown error : %w", err)
+		return fmt.Errorf("Unknown error : %w", err)
+	}
+
+	if len(wc.Wardrobes) == 0 {
+		glog.Errorf("Empty closet")
+		return fmt.Errorf("Empty closet")
+	}
+
+	tmp := wc.Wardrobes[:0]
+	for _, ward := range wc.Wardrobes {
+		if ward.Identifier == id {
+			ward.LabelText = text
+		}
+
+		tmp = append(tmp, ward)
+	}
+	wc.Wardrobes = tmp
+
+	err = w.db.Update(user, wc)
+	switch err := err.(type) {
+	case nil:
+	default:
+		glog.Errorf("Database access failure : %w", err)
+		return fmt.Errorf("Database access failure : %w", err)
+	}
+
 	return nil
 }
 
