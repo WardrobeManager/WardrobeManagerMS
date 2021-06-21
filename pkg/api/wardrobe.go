@@ -85,8 +85,8 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 	}
 
 	//Store image to file
-	imageFile := genUniqImageFileName(newWd.User, newWd.Description)
-	labelFile := genUniqLabelFileName(newWd.User, newWd.Description)
+	imageFile := genUniqImageFileName(newWd.User, newWd.Id)
+	labelFile := genUniqLabelFileName(newWd.User, newWd.Id)
 
 	for _, file := range []string{imageFile, labelFile} {
 		_, err := w.imageDb.GetFile(file)
