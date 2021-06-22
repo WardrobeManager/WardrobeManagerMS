@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/golang/glog"
 	"github.com/gomodule/redigo/redis"
@@ -39,6 +40,7 @@ type ImageRepository interface {
 }
 
 type wardrobeService struct {
+	mu      sync.Mutex
 	db      WardrobeRepository
 	imageDb ImageRepository
 	l       *wardrobeLabelToText
@@ -67,7 +69,12 @@ func NewWardrobeService(dbIn WardrobeRepository, imageDbIn ImageRepository, rds,
 
 func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 
+	glog.Infof("adding wardrobe {user=%s}, {id=%s}", newWd.User, newWd.Id)
+
 	var addUser bool = false
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
 	wc, err := w.db.Get(newWd.User)
 	switch err := err.(type) {
@@ -140,10 +147,17 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 		glog.Warningf("failure while trying to send lable from label to text {err=%v}", err)
 	}
 
+	glog.Infof("done adding wardrobe {user=%s}, {id=%s}", newWd.User, newWd.Id)
+
 	return nil
 }
 
 func (w *wardrobeService) DeleteWardrobe(user string, id string) error {
+
+	glog.Infof("deleting wardrobe {user=%s}, {id=%s}", user, id)
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
 	wc, err := w.db.Get(user)
 	switch err := err.(type) {
@@ -185,6 +199,8 @@ func (w *wardrobeService) DeleteWardrobe(user string, id string) error {
 	default:
 		return fmt.Errorf("Database access failure : %w", err)
 	}
+
+	glog.Infof("done deleting wardrobe {user=%s}, {id=%s}", user, id)
 
 	return nil
 }
@@ -278,6 +294,9 @@ func (w *wardrobeService) GetAllWardrobe(user string) ([]NewWardrobeRequest, err
 func (w *wardrobeService) updateWardrobeLabelText(user, id, text string) error {
 
 	glog.Infof("Received text {user=%s}, {id=%s}, {text=%s}", user, id, text)
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
 	wc, err := w.db.Get(user)
 	switch err := err.(type) {
