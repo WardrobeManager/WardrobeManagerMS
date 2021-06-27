@@ -9,6 +9,7 @@ package repository
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 
 	"path/filepath"
@@ -102,6 +103,24 @@ func (m *fileImageRepo) DeleteFile(name string) error {
 	err := os.Remove(filename)
 	if err != nil {
 		return fmt.Errorf("Error removing file %s : %w", filename, err)
+	}
+
+	return nil
+}
+
+func (m *fileImageRepo) AddFileFromFile(name string, rd io.Reader) error {
+
+	path := filepath.Join(m.Dir, name)
+
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("Error create file %s : %w", path, err)
+	}
+	defer f.Close()
+
+	_, err = io.Copy(f, rd)
+	if err != nil {
+		return fmt.Errorf("Error writing to file %s : %w", path, err)
 	}
 
 	return nil

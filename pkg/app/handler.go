@@ -21,15 +21,16 @@ func (s *Server) addWardrobe(c *gin.Context) {
 	username := c.Params.ByName("username")
 	wardId := c.Params.ByName("id")
 
-	glog.Infof("Add wardrobe for {user=%s}, {wardrobe-id=%s}", username, wardId)
+	glog.Infof("add wardrobe for {user=%s}, {wardrobe-id=%s}", username, wardId)
 
 	var newWd api.NewWardrobeRequest
-	err := c.BindJSON(&newWd)
+	err := c.Bind(&newWd)
 	if err != nil {
-		glog.Errorf("Error decoding JSON : {err=%v} ", username, wardId, err)
+		glog.Errorf("Error decoding Form : {err=%v} ", username, wardId, err)
 		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error decoding JSON : %s", err))
 		return
 	}
+	glog.Infof("done Bind for {user=%s}, {wardrobe-id=%s}", username, wardId)
 
 	newWd.User = username
 	newWd.Id = wardId
@@ -39,6 +40,8 @@ func (s *Server) addWardrobe(c *gin.Context) {
 		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error adding wardrobe: %s", err))
 		return
 	}
+
+	glog.Infof("done adding wardrobe for {user=%s}, {wardrobe-id=%s}", username, wardId)
 
 	c.String(http.StatusOK, "addUser")
 }

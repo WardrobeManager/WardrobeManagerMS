@@ -6,14 +6,20 @@
 
 package api
 
+import (
+	"mime/multipart"
+)
+
 const Version = "1.0"
 
 type NewWardrobeRequest struct {
-	User        string `json:"user" binding:"required"`
-	Id          string `json:"id" binding:"required"`
-	Description string `json:"description" binding:"required"`
-	MainImage   []byte `json:"main-image" binding:"required"`
-	LabelImage  []byte `json:"label-image" binding:"required"`
+	User           string
+	Id             string
+	Description    string `form:"description" binding:"required"`
+	MainImage      []byte
+	LabelImage     []byte
+	MainImageMime  *multipart.FileHeader `form:"main-image" binding:"required"`
+	LabelImageMime *multipart.FileHeader `form:"label-image" binding:"required"`
 }
 
 type Wardrobe struct {

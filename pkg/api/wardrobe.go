@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/golang/glog"
@@ -37,6 +38,7 @@ type ImageRepository interface {
 	GetFile(name string) ([]byte, error)
 	UpdateFile(name string, file []byte) error
 	DeleteFile(name string) error
+	AddFileFromFile(name string, rd io.Reader) error
 }
 
 type wardrobeService struct {
@@ -112,12 +114,24 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 	}
 
 	//Store files
-	err = w.imageDb.AddFile(imageFile, newWd.MainImage)
+	mimeMainFile, err1 := newWd.MainImageMime.Open()
+	if err1 != nil {
+		return fmt.Errorf("Error opening mime main image file : %w", err1)
+	}
+	defer mimeMainFile.Close()
+
+	mimeLabelFile, err2 := newWd.LabelImageMime.Open()
+	if err2 != nil {
+		return fmt.Errorf("Error opening mime label image file : %w", err2)
+	}
+	defer mimeLabelFile.Close()
+
+	err = w.imageDb.AddFileFromFile(imageFile, mimeMainFile)
 	if err != nil {
 		return fmt.Errorf("Error saving image to file system : %w", err)
 	}
 
-	err = w.imageDb.AddFile(labelFile, newWd.LabelImage)
+	err = w.imageDb.AddFileFromFile(labelFile, mimeLabelFile)
 	if err != nil {
 		return fmt.Errorf("Error saving image to file system : %w", err)
 	}
