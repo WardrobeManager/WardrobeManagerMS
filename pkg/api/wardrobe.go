@@ -17,6 +17,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/gomodule/redigo/redis"
+	"github.com/google/uuid"
 )
 
 type WardrobeService interface {
@@ -71,9 +72,12 @@ func NewWardrobeService(dbIn WardrobeRepository, imageDbIn ImageRepository, rds,
 
 func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 
-	glog.Infof("adding wardrobe {user=%s}, {id=%s}", newWd.User, newWd.Id)
-
 	var addUser bool = false
+
+	// generate a unique id
+	id := uuid.New().String()
+
+	glog.Infof("adding wardrobe {user=%s}, {id=%s}", newWd.User, id)
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -94,8 +98,8 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 	}
 
 	//Store image to file
-	imageFile := genUniqImageFileName(newWd.User, newWd.Id)
-	labelFile := genUniqLabelFileName(newWd.User, newWd.Id)
+	imageFile := genUniqImageFileName(newWd.User, id)
+	labelFile := genUniqLabelFileName(newWd.User, id)
 
 	for _, file := range []string{imageFile, labelFile} {
 		_, err := w.imageDb.GetFile(file)

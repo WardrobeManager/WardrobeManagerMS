@@ -20,7 +20,7 @@ import (
 const Version = "1.0"
 
 const (
-	CONNECTIONSTRING = "mongodb://localhost:27017"
+	CONNECTIONSTRING = "mongodb://172.16.42.31:27017"
 	DB               = "wardrobemanager"
 	WARDS            = "wardrobe"
 )
