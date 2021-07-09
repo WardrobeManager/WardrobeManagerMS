@@ -92,3 +92,24 @@ func (s *Server) deleteWardrobe(c *gin.Context) {
 
 	c.String(http.StatusOK, "deleteWardrobe")
 }
+
+func (s *Server) getFile(c *gin.Context) {
+	filename := c.Params.ByName("filename")
+
+	glog.Infof("Get file {filename=%s}", filename)
+
+	fileHandler := func(filepath string) error {
+
+		c.File(filepath)
+
+		return nil
+	}
+
+	err := s.ws.GetFile(filename, fileHandler)
+	if err != nil {
+		glog.Errorf("Error retrieving file, {err=%s}", err)
+		c.String(http.StatusInternalServerError, fmt.Sprintf("error: %s", err))
+		return
+	}
+
+}

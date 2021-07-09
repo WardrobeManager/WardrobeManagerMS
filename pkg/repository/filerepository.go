@@ -125,3 +125,17 @@ func (m *fileImageRepo) AddFileFromFile(name string, rd io.Reader) error {
 
 	return nil
 }
+
+func (m *fileImageRepo) GetFileWithHandler(filename string, fileHandler api.HandleFile) error {
+
+	fullpath := filepath.Join(m.Dir, filename)
+
+	if fileHandler != nil {
+		err := fileHandler(fullpath)
+		if err != nil {
+			return fmt.Errorf("file handler call failed for file %s : %w", filename, err)
+		}
+	}
+
+	return nil
+}

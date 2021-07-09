@@ -47,6 +47,16 @@ type LabelToTextResponse struct {
 	Text string `json:"text" binding="required"`
 }
 
+type GetWardrobeResponse struct {
+	Id          string `json:"id" binding="required"`
+	Description string `form:"description" binding:"required"`
+	MainImage   string `json:"main-image-uri" binding:"required"`
+	LabelImage  string `json:"label-image-uri" binding:"required"`
+}
+
+// Functions
+type HandleFile func(filename string) error
+
 // Error
 type UserNotFound struct {
 	User string

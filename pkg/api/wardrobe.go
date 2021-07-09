@@ -23,8 +23,9 @@ import (
 type WardrobeService interface {
 	AddWardrobe(new NewWardrobeRequest) error
 	DeleteWardrobe(user string, id string) error
-	GetWardrobe(user string, id string) (*NewWardrobeRequest, error)
-	GetAllWardrobe(user string) ([]NewWardrobeRequest, error)
+	GetWardrobe(user string, id string) (*GetWardrobeResponse, error)
+	GetAllWardrobe(user string) ([]*GetWardrobeResponse, error)
+	GetFile(filename string, cbHandler HandleFile) error
 }
 
 type WardrobeRepository interface {
@@ -40,6 +41,7 @@ type ImageRepository interface {
 	UpdateFile(name string, file []byte) error
 	DeleteFile(name string) error
 	AddFileFromFile(name string, rd io.Reader) error
+	GetFileWithHandler(filename string, fileHandler HandleFile) error
 }
 
 type wardrobeService struct {
@@ -223,7 +225,7 @@ func (w *wardrobeService) DeleteWardrobe(user string, id string) error {
 	return nil
 }
 
-func (w *wardrobeService) GetWardrobe(user string, id string) (*NewWardrobeRequest, error) {
+func (w *wardrobeService) GetWardrobe(user string, id string) (*GetWardrobeResponse, error) {
 
 	wc, err := w.db.Get(user)
 	switch err := err.(type) {
@@ -243,20 +245,11 @@ func (w *wardrobeService) GetWardrobe(user string, id string) (*NewWardrobeReque
 
 	for _, ward := range wc.Wardrobes {
 		if ward.Identifier == id {
-			wardReq := &NewWardrobeRequest{
-				User:        user,
+			wardReq := &GetWardrobeResponse{
 				Id:          ward.Identifier,
 				Description: ward.Description,
-			}
-
-			wardReq.MainImage, err = w.imageDb.GetFile(ward.MainFile)
-			if err != nil {
-				return nil, fmt.Errorf("Error accessing image : %w", err)
-			}
-
-			wardReq.LabelImage, err = w.imageDb.GetFile(ward.LabelFile)
-			if err != nil {
-				return nil, fmt.Errorf("Error accessing image : %w", err)
+				MainImage:   ward.MainFile,
+				LabelImage:  ward.LabelFile,
 			}
 
 			return wardReq, nil
@@ -266,7 +259,7 @@ func (w *wardrobeService) GetWardrobe(user string, id string) (*NewWardrobeReque
 	return nil, UserNotFound{User: user}
 }
 
-func (w *wardrobeService) GetAllWardrobe(user string) ([]NewWardrobeRequest, error) {
+func (w *wardrobeService) GetAllWardrobe(user string) ([]*GetWardrobeResponse, error) {
 
 	wc, err := w.db.Get(user)
 	switch err := err.(type) {
@@ -284,28 +277,24 @@ func (w *wardrobeService) GetAllWardrobe(user string) ([]NewWardrobeRequest, err
 		return nil, fmt.Errorf("Empty closet")
 	}
 
-	wardReqs := make([]NewWardrobeRequest, 0)
+	wardReqs := make([]*GetWardrobeResponse, 0)
 	for _, ward := range wc.Wardrobes {
-		wardReq := NewWardrobeRequest{
-			User:        user,
+		wardReq := &GetWardrobeResponse{
 			Id:          ward.Identifier,
 			Description: ward.Description,
-		}
-
-		wardReq.MainImage, err = w.imageDb.GetFile(ward.MainFile)
-		if err != nil {
-			return nil, fmt.Errorf("Error accessing image : %w", err)
-		}
-
-		wardReq.LabelImage, err = w.imageDb.GetFile(ward.LabelFile)
-		if err != nil {
-			return nil, fmt.Errorf("Error accessing image : %w", err)
+			MainImage:   ward.MainFile,
+			LabelImage:  ward.LabelFile,
 		}
 
 		wardReqs = append(wardReqs, wardReq)
 	}
 
 	return wardReqs, nil
+}
+
+func (w *wardrobeService) GetFile(filename string, cb HandleFile) error {
+
+	return w.imageDb.GetFileWithHandler(filename, cb)
 }
 
 //private functions
