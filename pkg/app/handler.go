@@ -7,7 +7,9 @@
 package app
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +20,7 @@ import (
 
 func (s *Server) addWardrobe(c *gin.Context) {
 
+	printRequest(c)
 	username := c.Params.ByName("username")
 	wardId := c.Params.ByName("id")
 
@@ -112,4 +115,12 @@ func (s *Server) getFile(c *gin.Context) {
 		return
 	}
 
+}
+
+//utility
+func printRequest(c *gin.Context) {
+	body, _ := ioutil.ReadAll(c.Request.Body)
+	println(string(body))
+
+	c.Request.Body = ioutil.NopCloser(bytes.NewReader(body))
 }

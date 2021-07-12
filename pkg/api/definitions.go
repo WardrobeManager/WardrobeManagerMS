@@ -49,7 +49,7 @@ type LabelToTextResponse struct {
 
 type GetWardrobeResponse struct {
 	Id          string `json:"id" binding="required"`
-	Description string `form:"description" binding:"required"`
+	Description string `json:"description" binding:"required"`
 	MainImage   string `json:"main-image-uri" binding:"required"`
 	LabelImage  string `json:"label-image-uri" binding:"required"`
 }
