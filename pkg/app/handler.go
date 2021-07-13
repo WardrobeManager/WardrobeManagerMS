@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
+        "encoding/hex"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
@@ -20,7 +22,6 @@ import (
 
 func (s *Server) addWardrobe(c *gin.Context) {
 
-	printRequest(c)
 	username := c.Params.ByName("username")
 	wardId := c.Params.ByName("id")
 
@@ -119,8 +120,20 @@ func (s *Server) getFile(c *gin.Context) {
 
 //utility
 func printRequest(c *gin.Context) {
+
+        // Print Header
+        fmt.Println(c.Request.Host, c.Request.RemoteAddr, c.Request.RequestURI)
+
+	// Save a copy of this request for debugging.
+	requestDump, err := httputil.DumpRequest(c.Request, true)
+	if err != nil {
+		fmt.Println(err)
+	}
+        fmt.Println(string(requestDump))
+
+        // Hex dump of request body
 	body, _ := ioutil.ReadAll(c.Request.Body)
-	println(string(body))
+	println(hex.Dump(body))
 
 	c.Request.Body = ioutil.NopCloser(bytes.NewReader(body))
 }
