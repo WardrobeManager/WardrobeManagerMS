@@ -14,7 +14,6 @@ const Version = "1.0"
 
 type NewWardrobeRequest struct {
 	User           string
-	Id             string
 	Description    string `form:"description" binding:"required"`
 	MainImage      []byte
 	LabelImage     []byte
@@ -33,6 +32,7 @@ type Wardrobe struct {
 type WardrobeCloset struct {
 	User      string `bson:"user"`
 	Wardrobes []Wardrobe
+	Outfits   []Outfit
 }
 
 type LabelToTextRequest struct {
@@ -52,6 +52,31 @@ type GetWardrobeResponse struct {
 	Description string `json:"description" binding:"required"`
 	MainImage   string `json:"main-image-uri" binding:"required"`
 	LabelImage  string `json:"label-image-uri" binding:"required"`
+}
+
+type NewOutfitRequest struct {
+	User        string
+	TopId       string `json:"top-id" binding:"required"`
+	BottomId    string `json:"bottom-id" binding:"required"`
+	Description string `json:"description" binding:"required"`
+}
+
+type Outfit struct {
+	Identifier   string `bson:"id"`
+	TopId        string `bson:"top-id"`
+	BottomId     string `bson:"bottom-id"`
+	Description  string `bson:"description"`
+	LikeCount    int    `bson:"like-count"`
+	DislikeCount int    `bson:"dislike-count"`
+}
+
+type GetOutfitResponse struct {
+	Id           string `json:"id" binding="required"`
+	TopId        string `json:"top-id" binding="required"`
+	BottomId     string `json:"bottom-id" binding="required"`
+	Description  string `json:"description" binding:"required"`
+	LikeCount    int    `json:"like-count" binding:"required"`
+	DislikeCount int    `json:"dislike-count" binding:"required"`
 }
 
 // Functions

@@ -26,6 +26,11 @@ type WardrobeService interface {
 	GetWardrobe(user string, id string) (*GetWardrobeResponse, error)
 	GetAllWardrobe(user string) ([]*GetWardrobeResponse, error)
 	GetFile(filename string, cbHandler HandleFile) error
+
+	AddOutfit(new NewOutfitRequest) error
+	DeleteOutfit(user string, id string) error
+	GetOutfit(user string, id string) (*GetOutfitResponse, error)
+	GetAllOutfits(user string) ([]*GetOutfitResponse, error)
 }
 
 type WardrobeRepository interface {
@@ -92,6 +97,7 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 		wc = &WardrobeCloset{
 			User:      newWd.User,
 			Wardrobes: make([]Wardrobe, 0),
+			Outfits:   make([]Outfit, 0),
 		}
 	case *ResourceUnavailable:
 		return fmt.Errorf("Wardrobe db is unavailable : %w", err)
@@ -144,7 +150,7 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 
 	//Update user
 	wc.Wardrobes = append(wc.Wardrobes, Wardrobe{
-		Identifier:  newWd.Id,
+		Identifier:  id,
 		MainFile:    imageFile,
 		LabelFile:   labelFile,
 		Description: newWd.Description,
@@ -162,12 +168,12 @@ func (w *wardrobeService) AddWardrobe(newWd NewWardrobeRequest) error {
 
 	//label to text
 	sEnc := base64.StdEncoding.EncodeToString(newWd.LabelImage)
-	err = w.l.sendLabel(newWd.User, newWd.Id, sEnc)
+	err = w.l.sendLabel(newWd.User, id, sEnc)
 	if err != nil {
 		glog.Warningf("failure while trying to send lable from label to text {err=%v}", err)
 	}
 
-	glog.Infof("done adding wardrobe {user=%s}, {id=%s}", newWd.User, newWd.Id)
+	glog.Infof("done adding wardrobe {user=%s}, {id=%s}", newWd.User, id)
 
 	return nil
 }
@@ -295,6 +301,163 @@ func (w *wardrobeService) GetAllWardrobe(user string) ([]*GetWardrobeResponse, e
 func (w *wardrobeService) GetFile(filename string, cb HandleFile) error {
 
 	return w.imageDb.GetFileWithHandler(filename, cb)
+}
+
+func (w *wardrobeService) AddOutfit(newOt NewOutfitRequest) error {
+
+	// generate a unique id
+	id := uuid.New().String()
+
+	glog.Infof("adding outfit {user=%s}, {id=%s}", newOt.User, id)
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	wc, err := w.db.Get(newOt.User)
+	switch err := err.(type) {
+	case nil:
+	case *UserNotFound:
+		return fmt.Errorf("User not found  : %w", err)
+	case *ResourceUnavailable:
+		return fmt.Errorf("Wardrobe db is unavailable : %w", err)
+	default:
+		return fmt.Errorf("Unknown error : %w", err)
+	}
+
+	//Update user
+	wc.Outfits = append(wc.Outfits, Outfit{
+		Identifier:   id,
+		TopId:        newOt.TopId,
+		BottomId:     newOt.BottomId,
+		Description:  newOt.Description,
+		LikeCount:    0,
+		DislikeCount: 0,
+	})
+
+	err = w.db.Update(newOt.User, wc)
+	switch err := err.(type) {
+	case nil:
+	default:
+		return fmt.Errorf("Database access failure : %w", err)
+	}
+
+	glog.Infof("done adding outfit {user=%s}, {id=%s}", newOt.User, id)
+
+	return nil
+}
+
+func (w *wardrobeService) DeleteOutfit(user string, id string) error {
+
+	glog.Infof("deleting outfit {user=%s}, {id=%s}", user, id)
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	wc, err := w.db.Get(user)
+	switch err := err.(type) {
+	case nil:
+		break
+	case *UserNotFound:
+		return fmt.Errorf("User not found %s : %w", user, err)
+	case *ResourceUnavailable:
+		return fmt.Errorf("Wardrobe db is unavailable : %w", err)
+	default:
+		return fmt.Errorf("Unknown error : %w", err)
+	}
+
+	if len(wc.Outfits) == 0 {
+		return fmt.Errorf("Empty outfits")
+	}
+
+	tmp := wc.Outfits[:0]
+	for _, ot := range wc.Outfits {
+		if ot.Identifier != id {
+			tmp = append(tmp, ot)
+		}
+	}
+	wc.Outfits = tmp
+
+	err = w.db.Update(user, wc)
+	switch err := err.(type) {
+	case nil:
+	default:
+		return fmt.Errorf("Database access failure : %w", err)
+	}
+
+	glog.Infof("done deleting outfit {user=%s}, {id=%s}", user, id)
+
+	return nil
+}
+
+func (w *wardrobeService) GetOutfit(user string, id string) (*GetOutfitResponse, error) {
+
+	wc, err := w.db.Get(user)
+	switch err := err.(type) {
+	case nil:
+		break
+	case *UserNotFound:
+		return nil, fmt.Errorf("User not found %s : %w", user, err)
+	case *ResourceUnavailable:
+		return nil, fmt.Errorf("Wardrobe db is unavailable : %w", err)
+	default:
+		return nil, fmt.Errorf("Unknown error : %w", err)
+	}
+
+	if len(wc.Outfits) == 0 {
+		return nil, fmt.Errorf("Empty closet")
+	}
+
+	for _, ot := range wc.Outfits {
+		if ot.Identifier == id {
+			otReq := &GetOutfitResponse{
+				Id:           ot.Identifier,
+				TopId:        ot.TopId,
+				BottomId:     ot.BottomId,
+				Description:  ot.Description,
+				LikeCount:    ot.LikeCount,
+				DislikeCount: ot.DislikeCount,
+			}
+
+			return otReq, nil
+		}
+	}
+
+	return nil, UserNotFound{User: user}
+}
+
+func (w *wardrobeService) GetAllOutfits(user string) ([]*GetOutfitResponse, error) {
+
+	wc, err := w.db.Get(user)
+	switch err := err.(type) {
+	case nil:
+		break
+	case *UserNotFound:
+		return nil, fmt.Errorf("User not found %s : %w", user, err)
+	case *ResourceUnavailable:
+		return nil, fmt.Errorf("Wardrobe db is unavailable : %w", err)
+	default:
+		return nil, fmt.Errorf("Unknown error : %w", err)
+	}
+
+	if len(wc.Outfits) == 0 {
+		return nil, fmt.Errorf("No outfits")
+	}
+
+	otReqs := make([]*GetOutfitResponse, 0)
+	for _, ot := range wc.Outfits {
+		otReq := &GetOutfitResponse{
+			Id:           ot.Identifier,
+			TopId:        ot.TopId,
+			BottomId:     ot.BottomId,
+			Description:  ot.Description,
+			LikeCount:    ot.LikeCount,
+			DislikeCount: ot.DislikeCount,
+		}
+
+		otReqs = append(otReqs, otReq)
+	}
+
+	return otReqs, nil
 }
 
 //private functions

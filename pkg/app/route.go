@@ -17,7 +17,7 @@ func (s *Server) Routes() *gin.Engine {
 	router.POST("/users/:username/wardrobes", s.addWardrobe)
 
 	//get all wardrobe for a user
-	router.GET("/users/:username/wardrobes", s.getAllWardrobe)
+	router.GET("/users/:username/wardrobes", s.getAllWardrobes)
 
 	//get a wardrobe for a user
 	router.GET("/users/:username/wardrobes/:id", s.getWardrobe)
@@ -27,6 +27,18 @@ func (s *Server) Routes() *gin.Engine {
 
 	//api to get image
 	router.GET("/images/:filename", s.getFile)
+
+	//add a outfit for a user
+	router.POST("/users/:username/outfits", s.addOutfit)
+
+	//get all outfits for a user
+	router.GET("/users/:username/outfits", s.getAllOutfits)
+
+	//get a wardrobe for a user
+	router.GET("/users/:username/outfits/:id", s.getOutfit)
+
+	//delete a wardrobe for a user
+	router.DELETE("/users/:username/outfits/:id", s.deleteOutfit)
 
 	return router
 }

@@ -8,11 +8,11 @@ package app
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
-        "encoding/hex"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
@@ -23,21 +23,19 @@ import (
 func (s *Server) addWardrobe(c *gin.Context) {
 
 	username := c.Params.ByName("username")
-	wardId := c.Params.ByName("id")
 
-	glog.Infof("add wardrobe for {user=%s}, {wardrobe-id=%s}", username, wardId)
+	glog.Infof("add wardrobe for {user=%s}", username)
 
 	var newWd api.NewWardrobeRequest
 	err := c.Bind(&newWd)
 	if err != nil {
-		glog.Errorf("Error decoding Form : {err=%v} ", username, wardId, err)
+		glog.Errorf("Error decoding Form : {err=%v} ", username, err)
 		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error decoding JSON : %s", err))
 		return
 	}
-	glog.Infof("done Bind for {user=%s}, {wardrobe-id=%s}", username, wardId)
+	glog.Infof("done Bind for {user=%s}", username)
 
 	newWd.User = username
-	newWd.Id = wardId
 	err = s.ws.AddWardrobe(newWd)
 	if err != nil {
 		glog.Errorf("Error adding wardrobe, {err=%v} ", err)
@@ -45,12 +43,12 @@ func (s *Server) addWardrobe(c *gin.Context) {
 		return
 	}
 
-	glog.Infof("done adding wardrobe for {user=%s}, {wardrobe-id=%s}", username, wardId)
+	glog.Infof("done adding wardrobe for {user=%s}", username)
 
 	c.String(http.StatusOK, "addUser")
 }
 
-func (s *Server) getAllWardrobe(c *gin.Context) {
+func (s *Server) getAllWardrobes(c *gin.Context) {
 	username := c.Params.ByName("username")
 
 	glog.Infof("Get all wardrobe for {user=%s}", username)
@@ -118,20 +116,95 @@ func (s *Server) getFile(c *gin.Context) {
 
 }
 
+func (s *Server) addOutfit(c *gin.Context) {
+
+	username := c.Params.ByName("username")
+
+	glog.Infof("add outfit for {user=%s}", username)
+
+	var newOt api.NewOutfitRequest
+	err := c.BindJSON(&newOt)
+	if err != nil {
+		glog.Errorf("Error decoding Form {users=%s}: {err=%v} ", username, err)
+		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error decoding JSON : %s", err))
+		return
+	}
+	glog.Infof("done Bind for {user=%s}", username)
+
+	newOt.User = username
+	err = s.ws.AddOutfit(newOt)
+	if err != nil {
+		glog.Errorf("Error adding outfit, {err=%v} ", err)
+		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error adding outfit: %s", err))
+		return
+	}
+
+	glog.Infof("done adding wardrobe for {user=%s}", username)
+
+	c.String(http.StatusOK, "addUser")
+}
+
+func (s *Server) getAllOutfits(c *gin.Context) {
+	username := c.Params.ByName("username")
+
+	glog.Infof("Get all outfits for {user=%s}", username)
+
+	outfits, err := s.ws.GetAllOutfits(username)
+	if err != nil {
+		glog.Errorf("Error geting all outfits, {err=%v} ", err)
+		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error: %s", err))
+		return
+	}
+
+	c.JSON(http.StatusOK, &outfits)
+}
+
+func (s *Server) getOutfit(c *gin.Context) {
+	username := c.Params.ByName("username")
+	otId := c.Params.ByName("id")
+
+	glog.Infof("Get outfit for {user=%s}, {outfit-id=%s} ", username, otId)
+
+	outfit, err := s.ws.GetOutfit(username, otId)
+	if err != nil {
+		glog.Errorf("Error get outfit,{err=%v}", err)
+		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error: %s", err))
+		return
+	}
+
+	c.JSON(http.StatusOK, &outfit)
+}
+
+func (s *Server) deleteOutfit(c *gin.Context) {
+	username := c.Params.ByName("username")
+	otId := c.Params.ByName("id")
+
+	glog.Infof("Delete wardrobe for {user=%s}, {outfit-id=%s} ", username, otId)
+
+	err := s.ws.DeleteWardrobe(username, otId)
+	if err != nil {
+		glog.Errorf("Error deleting outfit, {err=%s}", err)
+		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("error: %s", err))
+		return
+	}
+
+	c.String(http.StatusOK, "deleteOutfit")
+}
+
 //utility
 func printRequest(c *gin.Context) {
 
-        // Print Header
-        fmt.Println(c.Request.Host, c.Request.RemoteAddr, c.Request.RequestURI)
+	// Print Header
+	fmt.Println(c.Request.Host, c.Request.RemoteAddr, c.Request.RequestURI)
 
 	// Save a copy of this request for debugging.
 	requestDump, err := httputil.DumpRequest(c.Request, true)
 	if err != nil {
 		fmt.Println(err)
 	}
-        fmt.Println(string(requestDump))
+	fmt.Println(string(requestDump))
 
-        // Hex dump of request body
+	// Hex dump of request body
 	body, _ := ioutil.ReadAll(c.Request.Body)
 	println(hex.Dump(body))
 
