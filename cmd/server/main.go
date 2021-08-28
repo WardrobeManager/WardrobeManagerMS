@@ -24,7 +24,7 @@ const logFile = "/tmp/WM/gin.log"
 const imageRepo = "/tmp/ImageDb"
 
 const redisServer = "redis"
-const mongoServer = "mongodb"
+const mongoServer = "database"
 const txChannel = "Label"
 const rxChannel = "Text"
 
