@@ -30,7 +30,7 @@ type mongoWardRepo struct {
 
 func NewWardrobeRepository(server string) (api.WardrobeRepository, error) {
 
-	fmt.Println("Initializing Mongo User Store")
+	fmt.Printf("Initializing Mongo User Store {server=%s}\n",server)
 	clientOptions := options.Client().ApplyURI("mongodb://" + server)
 
 	client, err := mongo.Connect(context.TODO(), clientOptions)
