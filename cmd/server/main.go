@@ -23,7 +23,8 @@ import (
 const logFile = "/tmp/WM/gin.log"
 const imageRepo = "/tmp/ImageDb"
 
-const redisServer = ":6379"
+const redisServer = "redis"
+const mongoServer = "mongodb"
 const txChannel = "Label"
 const rxChannel = "Text"
 
@@ -43,7 +44,7 @@ func main() {
 		gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
 	}
 
-	mongoWardrobeRepo, err := repo.NewWardrobeRepository()
+	mongoWardrobeRepo, err := repo.NewWardrobeRepository(mongoServer)
 	if err != nil {
 		glog.Errorf(" Initializing Mongo repository failed  : %v", err)
 		return

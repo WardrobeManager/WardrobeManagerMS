@@ -20,7 +20,6 @@ import (
 const Version = "1.0"
 
 const (
-	CONNECTIONSTRING = "mongodb://127.0.0.1:27017"
 	DB               = "wardrobemanager"
 	WARDS            = "wardrobe"
 )
@@ -29,10 +28,10 @@ type mongoWardRepo struct {
 	collection *mongo.Collection
 }
 
-func NewWardrobeRepository() (api.WardrobeRepository, error) {
+func NewWardrobeRepository(server string) (api.WardrobeRepository, error) {
 
 	fmt.Println("Initializing Mongo User Store")
-	clientOptions := options.Client().ApplyURI(CONNECTIONSTRING)
+	clientOptions := options.Client().ApplyURI("mongodb://" + server)
 
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
