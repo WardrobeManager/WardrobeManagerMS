@@ -20,7 +20,7 @@ import (
 	repo "WardrobeManagerMS/pkg/repository"
 )
 
-const logFile = "/tmp/WM/gin.log"
+const logFile = "/tmp/gin.log"
 const imageRepo = "/tmp/ImageDb"
 
 const redisServer = "redis:6379"
