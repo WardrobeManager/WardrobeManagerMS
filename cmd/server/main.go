@@ -23,7 +23,7 @@ import (
 const logFile = "/tmp/WM/gin.log"
 const imageRepo = "/tmp/ImageDb"
 
-const redisServer = "redis"
+const redisServer = "redis:6379"
 const mongoServer = "database"
 const txChannel = "Label"
 const rxChannel = "Text"
