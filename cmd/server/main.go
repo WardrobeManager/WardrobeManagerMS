@@ -1,7 +1,7 @@
 //
 // main.go
 //
-// May 2021, Prashant Desai
+// May 2021, Prashant B Desai
 //
 
 package main
