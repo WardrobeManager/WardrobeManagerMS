@@ -1,5 +1,6 @@
-'''
+
 ### Useful commands
+`
   335  curl http://localhost:8080/user
   336  curl http://localhost:8080/User
   370  history | grep curl
@@ -41,10 +42,11 @@
   535  history | grep curl
   726  history | grep curl
   727  history | grep curl > README.md
-
+`
 
 ### Build
 
 ### Starting Microservice
+`
 ./WardrobeManagerMS --logtostderr=true
-'''
+`
